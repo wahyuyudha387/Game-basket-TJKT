@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Basket TJKT</title>
+<style>
+:root{
+  --bg:#e7edf6; --ink:#14233f; --muted:#5a6a88; --card:#ffffff; --line:#c9d3e4;
+  --ball:#e8641b; --ball2:#b84a0f; --floor:#c8955a; --floor2:#a87740; --ok:#1f9d63; --bad:#d6334a; --board:#ffffff; --rim:#f0521f;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#101c36;--ink:#eaf0fb;--muted:#92a2c4;--card:#18284a;--line:#2b3f69;--board:#f4f7fc;--floor:#b8844c;--floor2:#946636;--ok:#35c98a;--bad:#ff6b80}
+}
+:root[data-theme="dark"]{--bg:#101c36;--ink:#eaf0fb;--muted:#92a2c4;--card:#18284a;--line:#2b3f69;--board:#f4f7fc;--floor:#b8844c;--floor2:#946636;--ok:#35c98a;--bad:#ff6b80}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:ui-rounded,"Trebuchet MS","Segoe UI",system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding:20px 16px 40px}
+h1{margin:6px 0 2px;font-size:clamp(1.5rem,5vw,2rem);letter-spacing:-.01em;text-align:center}
+.sub{margin:0 0 12px;color:var(--muted);text-align:center;max-width:44ch;line-height:1.45}
+.stats{display:flex;gap:16px;align-items:center;font-weight:700;margin-bottom:10px}
+.stats b{background:var(--ink);color:var(--bg);border-radius:8px;padding:2px 10px;min-width:2.2em;text-align:center;font-variant-numeric:tabular-nums;margin-left:6px}
+#holder{position:relative}
+#stage{position:absolute;left:0;top:0;width:360px;height:480px;transform-origin:0 0;border-radius:22px;overflow:hidden;background:linear-gradient(var(--card),var(--bg));border:2px solid var(--line);touch-action:none;user-select:none}
+.layer{position:absolute;left:0;top:0;width:360px;height:300px;pointer-events:none}
+#back{z-index:1}#front{z-index:3}
+#qcard{position:absolute;left:10px;top:8px;width:340px;height:84px;background:var(--card);border:2px solid var(--ink);border-radius:14px;padding:8px 12px;z-index:4;display:flex;flex-direction:column;justify-content:center;gap:2px}
+#qnum{font-size:12px;color:var(--muted);font-weight:700}
+#qtext{font-size:15px;font-weight:800;line-height:1.3}
+.opt{position:absolute;top:240px;width:112px;height:58px;padding:4px 6px;font:inherit;font-size:12px;font-weight:700;line-height:1.2;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:10px;z-index:4;cursor:pointer;display:grid;place-items:center;text-align:center}
+.opt:focus-visible{outline:3px solid var(--rim);outline-offset:2px}
+.opt.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 22%,var(--card))}
+.opt.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 22%,var(--card))}
+#floor{position:absolute;left:0;right:0;bottom:0;height:62px;background:repeating-linear-gradient(90deg,var(--floor) 0 36px,var(--floor2) 36px 38px);border-top:4px solid var(--ink);z-index:0}
+#shadow{position:absolute;left:150px;top:430px;width:60px;height:12px;border-radius:50%;background:rgba(0,0,0,.28);z-index:1}
+#ball{position:absolute;left:0;top:0;width:70px;height:70px;z-index:2;cursor:grab;will-change:transform;touch-action:none}
+#ball.grab{cursor:grabbing}
+#ball svg{width:100%;height:100%;display:block;overflow:visible}
+.net{transform-box:fill-box;transform-origin:50% 0}
+.net.swish{animation:swish .7s ease-out}
+@keyframes swish{0%{transform:scale(1,1)}25%{transform:scale(1.16,1.3)}55%{transform:scale(.93,.9)}100%{transform:scale(1,1)}}
+#hint{position:absolute;left:0;right:0;top:312px;text-align:center;font-weight:700;font-size:14px;color:var(--muted);z-index:4;pointer-events:none;padding:0 20px}
+#pop{position:absolute;left:0;right:0;top:196px;text-align:center;font-size:32px;font-weight:900;z-index:6;pointer-events:none;opacity:0}
+#pop.go{animation:pop 1s ease-out}
+@keyframes pop{0%{opacity:0;transform:scale(.4)}20%{opacity:1;transform:scale(1.15)}100%{opacity:0;transform:translateY(-40px) scale(1)}}
+#end{position:absolute;inset:0;z-index:8;background:color-mix(in srgb,var(--bg) 92%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px}
+#end[hidden]{display:none}
+#end .big{font-size:64px;font-weight:900;line-height:1}
+#end p{margin:0;color:var(--muted);max-width:28ch;line-height:1.4}
+button.main{font:inherit;font-weight:700;border:2px solid var(--ball2);background:var(--ball);color:#fff;padding:10px 20px;border-radius:12px;cursor:pointer}
+button.main:focus-visible{outline:3px solid var(--rim);outline-offset:2px}
+#fb{width:min(360px,100%);margin:14px 0 8px;min-height:3.2em;line-height:1.45;font-size:14px;color:var(--ink)}
+#fb strong.ok{color:var(--ok)}#fb strong.bad{color:var(--bad)}
+@media (prefers-reduced-motion:reduce){.net.swish,#pop.go{animation:none}}
+</style>
+</head>
+<body>
+<h1>Basket TJKT</h1>
+<p class="sub">Baca soal, lalu seret bola ke ring jawaban yang benar. Boleh juga ketuk jawabannya.</p>
+<div class="stats"><span>Skor<b id="score">0</b></span><span>Beruntun<b id="streak">0</b></span></div>
+
+<div id="holder">
+  <div id="stage">
+    <svg id="back" class="layer" viewBox="0 0 360 300" aria-hidden="true"></svg>
+    <div id="qcard"><span id="qnum"></span><span id="qtext"></span></div>
+    <div id="shadow"></div>
+    <div id="floor"></div>
+    <div id="ball" role="img" aria-label="Bola basket">
+      <svg viewBox="0 0 70 70"><defs><radialGradient id="g" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#ff9a52"/><stop offset=".6" stop-color="var(--ball)"/><stop offset="1" stop-color="var(--ball2)"/></radialGradient></defs>
+        <circle cx="35" cy="35" r="33" fill="url(#g)" stroke="#2a1608" stroke-width="3"/>
+        <g fill="none" stroke="#2a1608" stroke-width="2.4"><path d="M2 35H68M35 2V68"/><path d="M10 11C25 24 25 46 10 59M60 11C45 24 45 46 60 59"/></g>
+      </svg>
+    </div>
+    <svg id="front" class="layer" viewBox="0 0 360 300" aria-hidden="true"></svg>
+    <button class="opt" id="o0" type="button" style="left:6px"></button>
+    <button class="opt" id="o1" type="button" style="left:124px"></button>
+    <button class="opt" id="o2" type="button" style="left:242px"></button>
+    <div id="hint"></div>
+    <div id="pop"></div>
+    <div id="end" hidden>
+      <div class="big" id="endScore">0</div>
+      <p id="endMsg"></p>
+      <button class="main" id="again" type="button">Main lagi</button>
+    </div>
+  </div>
+</div>
+
+<div id="fb" aria-live="polite"></div>
+<button class="main" id="next" type="button" hidden>Soal berikutnya</button>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var W=360,H=480,RY=172,SX=180,SY=398,HC=[62,180,298],ROUND=10;
+  // Bank soal Dasar-Dasar TJKT. o = pilihan, a = indeks jawaban benar, e = penjelasan.
+  var BANK=[
+    {q:'Perangkat yang meneruskan paket data antarjaringan berdasarkan alamat IP adalah ...',o:['Hub','Router','Repeater'],a:1,e:'Router bekerja di layer 3 (Network) dan memilih jalur berdasarkan alamat IP.'},
+    {q:'Urutan kabel T568B pada pin 1 dan 2 adalah ...',o:['Putih oranye, oranye','Putih hijau, hijau','Putih biru, biru'],a:0,e:'T568B: putih oranye, oranye, putih hijau, biru, putih biru, hijau, putih coklat, coklat.'},
+    {q:'Kabel yang dipakai untuk menghubungkan PC ke switch adalah ...',o:['Crossover','Straight','Rollover'],a:1,e:'Perangkat berbeda jenis (PC ke switch) memakai kabel straight, yaitu kedua ujung satu standar.'},
+    {q:'Model referensi OSI terdiri dari berapa layer?',o:['4 layer','5 layer','7 layer'],a:2,e:'Tujuh layer: Physical, Data Link, Network, Transport, Session, Presentation, Application.'},
+    {q:'Konektor yang dipasang pada ujung kabel UTP untuk jaringan LAN adalah ...',o:['RJ11','BNC','RJ45'],a:2,e:'RJ45 punya 8 pin dan dipakai untuk kabel UTP Ethernet. RJ11 untuk telepon (biasanya 4 atau 6 pin).'},
+    {q:'Topologi yang semua perangkatnya terhubung ke satu titik pusat disebut ...',o:['Star','Bus','Ring'],a:0,e:'Topologi star (bintang) memakai switch atau hub sebagai titik pusat.'},
+    {q:'Alamat IP 192.168.1.10 termasuk kelas ...',o:['Kelas A','Kelas B','Kelas C'],a:2,e:'Kelas C berawal dari 192 sampai 223, default subnet mask 255.255.255.0.'},
+    {q:'Bilangan biner 1010 sama dengan desimal ...',o:['8','10','12'],a:1,e:'1010 = 8 + 0 + 2 + 0 = 10.'},
+    {q:'Layer OSI yang menangani pengalamatan IP adalah ...',o:['Data Link','Network','Transport'],a:1,e:'Layer 3 (Network) mengurus alamat logis (IP) dan routing.'},
+    {q:'Protokol yang memberikan alamat IP secara otomatis ke komputer adalah ...',o:['DNS','FTP','DHCP'],a:2,e:'DHCP (Dynamic Host Configuration Protocol) membagikan IP, subnet mask, gateway, dan DNS otomatis.'},
+    {q:'Alat untuk memasang konektor RJ45 pada kabel UTP adalah ...',o:['Tang crimping','Solder','Obeng'],a:0,e:'Tang crimping menekan pin konektor RJ45 sehingga menembus isolasi kabel.'},
+    {q:'Alamat fisik yang tertanam di kartu jaringan (NIC) disebut ...',o:['IP address','MAC address','Port'],a:1,e:'MAC address berisi 48 bit dan bekerja di layer 2 (Data Link).'},
+    {q:'Nomor port default untuk protokol HTTP adalah ...',o:['21','443','80'],a:2,e:'HTTP memakai port 80, HTTPS memakai 443, FTP memakai 21.'},
+    {q:'Alat K3 untuk mencegah listrik statis saat merakit komputer adalah ...',o:['Gelang antistatis','Sarung tangan karet','Kacamata las'],a:0,e:'Gelang antistatis (anti-static wrist strap) membuang muatan statis agar komponen tidak rusak.'}
+  ];
+
+  var stage=$('#stage'),holder=$('#holder'),ball=$('#ball'),hint=$('#hint'),pop=$('#pop'),shadow=$('#shadow'),
+      back=$('#back'),front=$('#front'),fb=$('#fb'),nextBtn=$('#next'),endBox=$('#end'),
+      scoreEl=$('#score'),streakEl=$('#streak'),opts=[$('#o0'),$('#o1'),$('#o2')];
+  var bx=SX,by=SY,bs=1,rot=0,k=1,busy=false,answered=false;
+  var deck=[],n=0,cur=null,score=0,streak=0,right=0;
+
+  function fit(){
+    k=Math.min(1,(window.innerWidth-32)/W);
+    stage.style.transform='scale('+k+')';
+    holder.style.width=W*k+'px';holder.style.height=H*k+'px';
+  }
+  fit();window.addEventListener('resize',fit);
+
+  // Gambar tiga ring (papan, pelek belakang, jaring, pelek depan)
+  var b='',f='';
+  HC.forEach(function(cx,i){
+    b+='<rect x="'+(cx-40)+'" y="100" width="80" height="46" rx="6" fill="var(--board)" stroke="var(--ink)" stroke-width="3"/>'+
+       '<rect x="'+(cx-16)+'" y="116" width="32" height="22" fill="none" stroke="var(--rim)" stroke-width="2.5"/>'+
+       '<rect x="'+(cx-5)+'" y="146" width="10" height="22" fill="var(--ink)"/>'+
+       '<path d="M'+(cx-32)+' '+RY+' A32 8 0 0 1 '+(cx+32)+' '+RY+'" fill="none" stroke="var(--rim)" stroke-width="5" stroke-linecap="round"/>';
+    var p='';
+    for(var j=-3;j<=3;j++)p+='M'+(cx+j*10)+' '+(RY+2)+'L'+(cx+j*6)+' '+(RY+62);
+    for(var r=1;r<=3;r++){var y=RY+r*16,w=30-r*4;p+='M'+(cx-w)+' '+y+'Q'+cx+' '+(y+9)+' '+(cx+w)+' '+y}
+    f+='<g class="net" id="net'+i+'" stroke="var(--board)" stroke-width="2" fill="none" stroke-linecap="round"><path d="'+p+'"/></g>'+
+       '<path d="M'+(cx-32)+' '+RY+' A32 8 0 0 0 '+(cx+32)+' '+RY+'" fill="none" stroke="var(--rim)" stroke-width="6" stroke-linecap="round"/>';
+  });
+  back.innerHTML=b;front.innerHTML=f;
+
+  function place(){
+    ball.style.transform='translate('+(bx-35)+'px,'+(by-35)+'px) rotate('+rot+'deg) scale('+bs+')';
+    shadow.style.left=(bx-30)+'px';
+    shadow.style.opacity=Math.max(0,1-(SY-by)/260);
+  }
+  place();
+
+  function lerp(a,c,t){return a+(c-a)*t}
+  function bounce(t){var m=7.5625,d=2.75;
+    if(t<1/d)return m*t*t;if(t<2/d)return m*(t-=1.5/d)*t+.75;
+    if(t<2.5/d)return m*(t-=2.25/d)*t+.9375;return m*(t-=2.625/d)*t+.984375}
+  function anim(ms,fn){return new Promise(function(res){
+    var s=performance.now();
+    (function loop(now){var t=Math.min(1,(now-s)/ms);fn(t);place();t<1?requestAnimationFrame(loop):res()})(s);
+  })}
+  function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+
+  function start(){
+    deck=shuffle(BANK.slice()).slice(0,ROUND);n=0;score=0;streak=0;right=0;
+    scoreEl.textContent=0;streakEl.textContent=0;endBox.hidden=true;load();
+  }
+  function load(){
+    var q=deck[n],idx=shuffle([0,1,2]);
+    cur={q:q.q,e:q.e,o:idx.map(function(i){return q.o[i]}),a:idx.indexOf(q.a)};
+    $('#qnum').textContent='Soal '+(n+1)+' dari '+deck.length;
+    $('#qtext').textContent=cur.q;
+    opts.forEach(function(el,i){el.textContent=cur.o[i];el.className='opt'});
+    fb.textContent='';nextBtn.hidden=true;answered=false;
+    bx=SX;by=SY;bs=1;place();hint.textContent='Seret bola ke ring jawaban yang benar';
+  }
+
+  async function shoot(i){
+    if(busy||answered)return;
+    busy=true;answered=true;hint.textContent='';
+    var cx=HC[i],ok=(i===cur.a),sx=bx,sy=by,r0=rot,side=Math.random()<.5?-1:1,ex=cx+side*37;
+    var tx=ok?cx:ex,ty=ok?RY-44:RY-38;
+    await anim(900,function(t){
+      bx=lerp(sx,tx,t);by=lerp(sy,ty,t)-150*4*t*(1-t);bs=lerp(1,.72,t);rot=r0+t*540;
+    });
+    if(ok){
+      await anim(240,function(t){by=lerp(RY-44,RY+70,t*t);bx=cx;rot+=4});
+      var net=$('#net'+i);net.classList.remove('swish');void net.getBBox();net.classList.add('swish');
+      score+=10+Math.min(streak,5)*2;streak++;right++;
+      pop.textContent='Swish!';pop.style.color='var(--ok)';
+      await anim(650,function(t){by=lerp(RY+70,SY,bounce(t));bs=lerp(.72,1,t);rot+=3});
+    }else{
+      streak=0;pop.textContent='Meleset!';pop.style.color='var(--bad)';
+      var fx=Math.max(40,Math.min(320,ex+side*70));
+      pop.classList.remove('go');void pop.offsetWidth;pop.classList.add('go');
+      await anim(750,function(t){
+        bx=lerp(ex,fx,t);by=lerp(RY-38,SY,t*t)-80*Math.sin(Math.PI*t)*(1-t);bs=lerp(.72,1,t);rot+=side*12;
+      });
+      opts[i].classList.add('bad');
+    }
+    if(ok){pop.classList.remove('go');void pop.offsetWidth;pop.classList.add('go')}
+    opts[cur.a].classList.add('ok');
+    scoreEl.textContent=score;streakEl.textContent=streak;
+    fb.innerHTML='<strong class="'+(ok?'ok':'bad')+'">'+(ok?'Benar!':'Belum tepat.')+'</strong> '+'<span></span>';
+    fb.querySelector('span').textContent=cur.e;
+    var sx2=bx;await anim(300,function(t){bx=lerp(sx2,SX,t);by=SY;bs=1});
+    nextBtn.textContent=(n+1<deck.length)?'Soal berikutnya':'Lihat skor';
+    nextBtn.hidden=false;busy=false;
+  }
+
+  function finish(){
+    $('#endScore').textContent=score;
+    var p=right/deck.length;
+    $('#endMsg').textContent=right+' dari '+deck.length+' jawaban benar. '+(p>=.8?'Mantap, materi dasar sudah kuat.':p>=.5?'Lumayan. Ulangi sekali lagi untuk memantapkan.':'Pelajari lagi materinya, lalu coba ulang.');
+    endBox.hidden=false;
+  }
+  nextBtn.addEventListener('click',function(){n++;n<deck.length?load():finish()});
+  $('#again').addEventListener('click',start);
+
+  opts.forEach(function(el,i){el.addEventListener('click',function(){shoot(i)})});
+
+  // Seret bola
+  var dragging=false,ox=0,oy=0;
+  function pos(e){var r=stage.getBoundingClientRect();return{x:(e.clientX-r.left)/k,y:(e.clientY-r.top)/k}}
+  ball.addEventListener('pointerdown',function(e){
+    if(busy||answered)return;
+    dragging=true;ball.classList.add('grab');ball.setPointerCapture(e.pointerId);
+    var p=pos(e);ox=bx-p.x;oy=by-p.y;bs=1.1;place();
+  });
+  ball.addEventListener('pointermove',function(e){
+    if(!dragging)return;var p=pos(e);
+    bx=Math.max(35,Math.min(W-35,p.x+ox));by=Math.max(100,Math.min(H-35,p.y+oy));place();
+  });
+  function release(){
+    if(!dragging)return;dragging=false;ball.classList.remove('grab');
+    if(by<340){
+      var best=0;HC.forEach(function(c,i){if(Math.abs(bx-c)<Math.abs(bx-HC[best]))best=i});
+      shoot(best);return;
+    }
+    var sx=bx,sy=by;busy=true;
+    anim(380,function(t){bx=lerp(sx,SX,1-Math.pow(1-t,3));by=lerp(sy,SY,bounce(t));bs=lerp(bs,1,t)}).then(function(){busy=false});
+    hint.textContent='Angkat bola lebih tinggi, lalu lepas dekat ring';
+  }
+  ball.addEventListener('pointerup',release);
+  ball.addEventListener('pointercancel',release);
+
+  start();
+})();
+</script>
+</body>
+</html>
